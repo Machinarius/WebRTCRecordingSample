@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>WebRTC capture sample</title>
+
+        <!-- <script src="dist/SignallingChannel.js"></script>
+        <script src="dist/RTCConnectionHandler.js"></script>
+        <script src="dist/index.js"></script> -->
+
+        <script src="dist/bundle.js"></script>
+        <meta charset="UTF-8">
+    </head>
+    <body>
+        <p>0. Does the browser support the MediaStream APIs?</p>
+        <input type="checkbox" disabled id="browser-support" />
+
+        <p>1. Create signalling channel connection</p>
+        <button id="create-comms" disabled>Create comm channel</button>
+        <p id="sessionid-output"></p>
+
+        <p>2. Request camera permissions</p>
+        <button id="request-camera" disabled>Request permissions</button>
+
+        <p>3. See camera output</p>
+        <video id="camera-output" width="800" height="450" autoplay></video>
+
+        <p>4. Request screen sharing</p>
+        <button id="request-screenshare" disabled>Request permission</button>
+
+        <p>5. See screensharing output</p>
+        <video id="screen-output" width="800" height="450" autoplay></video>
+
+        <p>6. Start connection flow</p>
+        <button id="create-connection" disabled>Create connection</button>
+
+        <p>Recording status: <span id="recording-status">Not possible yet</span></p>
+
+        <p>7. Start recording</p>
+        <button id="start-recording" disabled>Start recording</button>
+
+        <p>8. Stop recording</p>
+        <button id="stop-recording" disabled>Stop recording</button>
+    </body>
+</html>
