@@ -166,6 +166,13 @@ export default class RTCHandler {
             this.activeRecorders.push(streamRecorder);
         });
     }
+
+    public onClientDisconnected() {
+        this.onRecordingStopRequested();
+        Object.keys(this.incomingStreams).forEach(streamId => {
+            this.incomingStreams[streamId].stop();
+        });
+    }
 }
 
 // Taken from  https://github.com/medooze/media-server-demo-node/blob/6410877683f62a4e3e8ec0f15575230eb2a980fa/lib/recording.js#L16

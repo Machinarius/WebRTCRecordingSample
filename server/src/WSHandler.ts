@@ -22,6 +22,9 @@ export default class WSHandler {
         (this.clientSocket as any)
             .on("message", this.handleIncomingMessage.bind(this));
 
+        (this.clientSocket as any)
+            .on("close", this.handleConnectionClosed.bind(this));
+
         this.clientSocket.send(JSON.stringify(<SessionCreatedAnnouncement>{
             action: WSAction.SessionCreatedAnnouncement,
             sessionId: this.connectionId
@@ -87,5 +90,9 @@ export default class WSHandler {
                 this.handleRecordingStopRequested(); 
                 break;
         }
+    }
+
+    private handleConnectionClosed() {
+        this.rtcHandler.onClientDisconnected();
     }
 }
