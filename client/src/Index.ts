@@ -23,6 +23,8 @@ var cameraOutputElement: HTMLVideoElement;
 var browserSupportCheck: HTMLInputElement;
 var recordingStatusLabel: HTMLElement;
 
+var outputContainer: HTMLElement;
+
 function initSample() {
     sessionIdOutput = document.getElementById("sessionid-output") as HTMLElement;
     createCommsButton = document.getElementById("create-comms") as HTMLInputElement;
@@ -37,6 +39,8 @@ function initSample() {
 
     browserSupportCheck = document.getElementById("browser-support") as HTMLInputElement;
     recordingStatusLabel = document.getElementById("recording-status") as HTMLElement;
+
+    outputContainer = document.getElementById("output-container") as HTMLElement;
 
     if (!hasGetUserMedia()) {
         browserSupportCheck.checked = false;
@@ -136,6 +140,8 @@ function handleRemoteReadyToRecord() {
 function startRecording() {
     startRercordingButton.disabled = true;
     signallingChannel.sendRecordingStartRequest();
+
+    clearOutputContainer();
 }
 
 function stopRecording() {
@@ -149,8 +155,47 @@ function handleRemoteStartedRecording(sessionId: string) {
     stopRecordingButton.disabled = false;
 }
 
-function handleRemoteStoppedRecording(sessionId: string) {
+function handleRemoteStoppedRecording(sessionId: string, cameraFiles: string[], screenFiles: string[]) {
     recordingStatusLabel.innerText = `Recording stopped for session with id ${sessionId}`;
     startRercordingButton.disabled = false;
     stopRecordingButton.disabled = true;
+
+    clearOutputContainer();
+
+    let outputHeader = document.createElement("p");
+    outputHeader.innerText = "9. Preview recordings";
+    outputContainer.appendChild(outputHeader);
+
+    let cameraHeader = document.createElement("p");
+    cameraHeader.innerText = "Camera recording";
+    outputContainer.appendChild(cameraHeader);
+
+    cameraFiles.forEach(addFileToOutput);
+
+    let screenHeader = document.createElement("p");
+    screenHeader.innerText = "Screen recording";
+    outputContainer.appendChild(screenHeader);
+
+    screenFiles.forEach(addFileToOutput);
+}
+
+function addFileToOutput(filePath: string) {
+    let fileLocation = filePath;
+    if (filePath.startsWith(".")) {
+        fileLocation = filePath.substr(1); // Remove dot from path
+    }
+
+    if (fileLocation.startsWith("/")) {
+        fileLocation = fileLocation.substr(1); // Remove starting slash
+    }
+
+    let fileUrl = "http://localhost:9000/" + fileLocation;
+    let videoElement = document.createElement("video") as HTMLVideoElement;
+    videoElement.controls = true;
+    videoElement.src = fileUrl;
+    outputContainer.appendChild(videoElement);
+}
+
+function clearOutputContainer() {
+    outputContainer.innerHTML = "";
 }

@@ -42,9 +42,18 @@ export interface ServerSDPInfoAnnouncement extends IMessage {
     sdpPayload: string
 }
 
-export interface RecordingEvent extends IMessage {
-    action: typeof WSAction.RecordingStartedAnnouncement | typeof WSAction.RecordingStoppedAnnouncement,
+export interface RecordingStartedAnnouncement extends IMessage {
+    action: typeof WSAction.RecordingStartedAnnouncement,
     sessionId: string
+}
+
+export interface RecordingStoppedAnnouncement extends IMessage {
+    action: typeof WSAction.RecordingStoppedAnnouncement,
+    sessionId: string,
+    generatedFiles: {
+        cameraFiles: string[],
+        screenFiles: string[]
+    }
 }
 
 export interface ICECandidateData {

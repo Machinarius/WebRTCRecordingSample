@@ -124,25 +124,6 @@ export default class RTCHandler {
         return offerAnswer;
     }  
 
-    private activeRecorders: Recorder[] = [];
-    private incomingStreams: {
-        [id: string]: IncomingStream | undefined
-    } = {};
-    
-    public onRecordingStopRequested() {
-        if (this.activeRecorders.length == 0 || !this.currentSessionId) {
-            return;
-        }
-
-        this.activeRecorders.forEach(recorder => {
-            recorder.stop();
-        });
-        this.activeRecorders = [];
-
-        this.signallingChannel.sendRecordingStoppedEvent(this.currentSessionId);
-        this.currentSessionId = null;
-    }
-
     private currentSessionId: string | null;
     private sessionRecordings: {
         [sessionId: string]: {
@@ -164,6 +145,31 @@ export default class RTCHandler {
         this.sessionRecordings[this.currentSessionId] = generatedRecordings;
 
         this.signallingChannel.sendRecordingStartedEvent(this.currentSessionId);
+    }
+    
+    private activeRecorders: Recorder[] = [];
+    private incomingStreams: {
+        [id: string]: IncomingStream | undefined
+    } = {};
+    
+    public async onRecordingStopRequested() {
+        if (this.activeRecorders.length == 0 || !this.currentSessionId) {
+            return;
+        }
+
+        this.activeRecorders.forEach(recorder => {
+            recorder.stop(); // This API is pending a promise to enable awaiting the flush procedure
+        });
+        this.activeRecorders = [];
+
+        var previousSessionId = this.currentSessionId;
+        this.currentSessionId = null;
+
+        await new Promise((resolve) => {
+            setTimeout(resolve, 1000); // Give the recording system some time to flush the recording to disk
+        });
+        let generatedFiles = this.sessionRecordings[previousSessionId];
+        this.signallingChannel.sendRecordingStoppedEvent(previousSessionId, generatedFiles.camera, generatedFiles.screen);
     }
     
     private beginRecordingStream(streamName: string, streamOffer: SDPInfo, streamTransport: Transport, sessionId: string) {

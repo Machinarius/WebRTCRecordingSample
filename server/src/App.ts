@@ -27,7 +27,7 @@ app.use(bodyParser.json());
 
 app.use(function(req, res, next) {
     res.header("Access-Control-Allow-Origin", "*");
-    res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+    res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Range");
     next();
 });
 
@@ -35,6 +35,14 @@ app.get("/ping", (req, res) => {
     res.send("PONG");
     res.end();
 });
+
+import path from "path";
+let recordingsPath = path.resolve("./recordings");
+app.use("/recordings", express.static(recordingsPath, {
+    fallthrough: false,
+    index: false
+}));
+console.log("Serving recording files from " + recordingsPath);
 
 var port = process.env.PORT || 9000;
 console.log("Web App listening on port " + port);

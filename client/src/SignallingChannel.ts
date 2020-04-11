@@ -1,6 +1,6 @@
 import { WSAction, SDPInfoAnnouncement, ICECandidateAnnouncement, IMessage, 
     SessionCreatedAnnouncement, ICECandidateGatheringFinished, 
-    ServerSDPInfoAnnouncement, ICECandidateData, RecordingEvent } from "../../server/common/CommChannelConstants";
+    ServerSDPInfoAnnouncement, ICECandidateData, RecordingStartedAnnouncement, RecordingStoppedAnnouncement } from "../../server/common/CommChannelConstants";
 
 export default class SignallingChannel {
     private channel: WebSocket;
@@ -10,7 +10,7 @@ export default class SignallingChannel {
     public onRemoteSdpDataObtained?: (streamName: string, sdpData: string) => void;
 
     public onRemoteStartedRecording?: (sessionId: string) => void;
-    public onRemoteStoppedRecording?: (sessionId: string) => void;
+    public onRemoteStoppedRecording?: (sessionId: string, cameraFiles: string[], screenFiles: string[]) => void;
 
     constructor() {
         this.sessionReadyResolver = (_) => {};
@@ -116,10 +116,10 @@ export default class SignallingChannel {
                 this.handleServerSDPInfoAnnouncement(<ServerSDPInfoAnnouncement>message);
                 break;
             case WSAction.RecordingStartedAnnouncement:
-                this.handleRecordingStartedAnnouncement(<RecordingEvent>message);
+                this.handleRecordingStartedAnnouncement(<RecordingStartedAnnouncement>message);
                 break;
             case WSAction.RecordingStoppedAnnouncement:
-                this.handleRecordingStoppedAnnouncement(<RecordingEvent>message);
+                this.handleRecordingStoppedAnnouncement(<RecordingStoppedAnnouncement>message);
                 break;
         }
     }
@@ -134,13 +134,13 @@ export default class SignallingChannel {
         this.sessionReadyResolver(announcement.sessionId);
     }
 
-    private handleRecordingStoppedAnnouncement(message: RecordingEvent) {
+    private handleRecordingStoppedAnnouncement(message: RecordingStoppedAnnouncement) {
         if (this.onRemoteStoppedRecording) {
-            this.onRemoteStoppedRecording(message.sessionId);
+            this.onRemoteStoppedRecording(message.sessionId, message.generatedFiles.cameraFiles, message.generatedFiles.screenFiles);
         }
     }
 
-    private handleRecordingStartedAnnouncement(message: RecordingEvent) {
+    private handleRecordingStartedAnnouncement(message: RecordingStartedAnnouncement) {
         if (this.onRemoteStartedRecording) {
             this.onRemoteStartedRecording(message.sessionId);
         }
