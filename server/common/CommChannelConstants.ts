@@ -42,6 +42,11 @@ export interface ServerSDPInfoAnnouncement extends IMessage {
     sdpPayload: string
 }
 
+export interface RecordingEvent extends IMessage {
+    action: typeof WSAction.RecordingStartedAnnouncement | typeof WSAction.RecordingStoppedAnnouncement,
+    sessionId: string
+}
+
 export interface ICECandidateData {
     foundation: string,
     componentId: number,

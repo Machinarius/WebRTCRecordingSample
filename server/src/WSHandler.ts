@@ -5,7 +5,7 @@ import { Endpoint as RTCEndpoint } from "medooze-media-server";
 import RTCHandler from "./RTCHandler";
 
 import { SessionCreatedAnnouncement, WSAction, IMessage, SDPInfoAnnouncement, 
-    ICECandidateAnnouncement, ICECandidateGatheringFinished, ServerSDPInfoAnnouncement } from "../common/CommChannelConstants";
+    ICECandidateAnnouncement, ICECandidateGatheringFinished, ServerSDPInfoAnnouncement, RecordingEvent } from "../common/CommChannelConstants";
 
 export default class WSHandler {
     private rtcHandler: RTCHandler;
@@ -39,15 +39,17 @@ export default class WSHandler {
         }));
     }
 
-    public sendRecordingStartedEvent() {
-        this.clientSocket.send(JSON.stringify(<IMessage>{
-            action: WSAction.RecordingStartedAnnouncement
-        }))
+    public sendRecordingStartedEvent(sessionId: string) {
+        this.clientSocket.send(JSON.stringify(<RecordingEvent>{
+            action: WSAction.RecordingStartedAnnouncement,
+            sessionId: sessionId
+        }));
     }
     
-    public sendRecordingStoppedEvent() {
-        this.clientSocket.send(JSON.stringify(<IMessage>{
-            action: WSAction.RecordingStoppedAnnouncement
+    public sendRecordingStoppedEvent(sessionId: string) {
+        this.clientSocket.send(JSON.stringify(<RecordingEvent>{
+            action: WSAction.RecordingStoppedAnnouncement,
+            sessionId: sessionId
         }))
     }
 

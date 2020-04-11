@@ -2,6 +2,7 @@ import MediaServer, { Endpoint as RTCEndpoint, Transport, Recorder, IncomingStre
 import SemanticSDP, { SDPInfo, CandidateInfo } from "semantic-sdp";
 
 import path from "path";
+import fs from "fs";
 import * as uuid from "uuid";
 
 import WSHandler from "./WSHandler";
@@ -129,7 +130,7 @@ export default class RTCHandler {
     } = {};
     
     public onRecordingStopRequested() {
-        if (this.activeRecorders.length == 0) {
+        if (this.activeRecorders.length == 0 || !this.currentSessionId) {
             return;
         }
 
@@ -138,23 +139,42 @@ export default class RTCHandler {
         });
         this.activeRecorders = [];
 
-        this.signallingChannel.sendRecordingStoppedEvent();
+        this.signallingChannel.sendRecordingStoppedEvent(this.currentSessionId);
+        this.currentSessionId = null;
     }
 
+    private currentSessionId: string | null;
+    private sessionRecordings: {
+        [sessionId: string]: {
+            camera: string[],
+            screen: string[]
+        }
+    } = {};
+
     public onRecordingStartRequested() {
-        if (this.activeRecorders.length > 0) {
+        if (this.activeRecorders.length > 0 || this.currentSessionId) {
             return;
         }
 
-        this.beginRecordingStream("camera", this.cameraSdpInfo, this.cameraTransport);
-        this.beginRecordingStream("screen", this.screenSdpInfo, this.screenTransport);
+        this.currentSessionId = uuid.v4();
+        let generatedRecordings = {
+            camera: this.beginRecordingStream("camera", this.cameraSdpInfo, this.cameraTransport, this.currentSessionId),
+            screen: this.beginRecordingStream("screen", this.screenSdpInfo, this.screenTransport, this.currentSessionId)
+        };
+        this.sessionRecordings[this.currentSessionId] = generatedRecordings;
 
-        this.signallingChannel.sendRecordingStartedEvent();
+        this.signallingChannel.sendRecordingStartedEvent(this.currentSessionId);
     }
     
-    private beginRecordingStream(streamName: string, streamOffer: SDPInfo, streamTransport: Transport) {
+    private beginRecordingStream(streamName: string, streamOffer: SDPInfo, streamTransport: Transport, sessionId: string) {
+        let generatedRecordings = [];
         streamOffer.getStreams().forEach(stream => {
-            let recordingTarget = path.resolve(`./recordings/${streamName}-${this.connectionId}-${uuid.v4()}.mp4`);
+            if (!fs.existsSync("./recordings/" + sessionId)) {
+                fs.mkdirSync("./recordings/" + sessionId);
+            }
+
+            let relativeFilename = `./recordings/${sessionId}/${streamName}.mp4`;
+            let recordingTarget = path.resolve(relativeFilename);
             let streamRecorder = MediaServer.createRecorder(recordingTarget);
             let incomingStream = this.incomingStreams[stream.getId()];
             if (!incomingStream) {
@@ -164,7 +184,10 @@ export default class RTCHandler {
 
             streamRecorder.record(incomingStream);
             this.activeRecorders.push(streamRecorder);
+
+            generatedRecordings.push(relativeFilename);
         });
+        return generatedRecordings;
     }
 
     public onClientDisconnected() {

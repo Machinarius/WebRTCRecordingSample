@@ -1,6 +1,6 @@
 import { WSAction, SDPInfoAnnouncement, ICECandidateAnnouncement, IMessage, 
     SessionCreatedAnnouncement, ICECandidateGatheringFinished, 
-    ServerSDPInfoAnnouncement, ICECandidateData } from "../../server/common/CommChannelConstants";
+    ServerSDPInfoAnnouncement, ICECandidateData, RecordingEvent } from "../../server/common/CommChannelConstants";
 
 export default class SignallingChannel {
     private channel: WebSocket;
@@ -9,8 +9,8 @@ export default class SignallingChannel {
     
     public onRemoteSdpDataObtained?: (streamName: string, sdpData: string) => void;
 
-    public onRemoteStartedRecording?: () => void;
-    public onRemoteStoppedRecording?: () => void;
+    public onRemoteStartedRecording?: (sessionId: string) => void;
+    public onRemoteStoppedRecording?: (sessionId: string) => void;
 
     constructor() {
         this.sessionReadyResolver = (_) => {};
@@ -116,10 +116,10 @@ export default class SignallingChannel {
                 this.handleServerSDPInfoAnnouncement(<ServerSDPInfoAnnouncement>message);
                 break;
             case WSAction.RecordingStartedAnnouncement:
-                this.handleRecordingStartedAnnouncement();
+                this.handleRecordingStartedAnnouncement(<RecordingEvent>message);
                 break;
             case WSAction.RecordingStoppedAnnouncement:
-                this.handleRecordingStoppedAnnouncement();
+                this.handleRecordingStoppedAnnouncement(<RecordingEvent>message);
                 break;
         }
     }
@@ -134,15 +134,15 @@ export default class SignallingChannel {
         this.sessionReadyResolver(announcement.sessionId);
     }
 
-    private handleRecordingStoppedAnnouncement() {
+    private handleRecordingStoppedAnnouncement(message: RecordingEvent) {
         if (this.onRemoteStoppedRecording) {
-            this.onRemoteStoppedRecording();
+            this.onRemoteStoppedRecording(message.sessionId);
         }
     }
 
-    private handleRecordingStartedAnnouncement() {
+    private handleRecordingStartedAnnouncement(message: RecordingEvent) {
         if (this.onRemoteStartedRecording) {
-            this.onRemoteStartedRecording();
+            this.onRemoteStartedRecording(message.sessionId);
         }
     }
 }

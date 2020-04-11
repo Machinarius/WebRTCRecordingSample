@@ -143,14 +143,14 @@ function stopRecording() {
     signallingChannel.sendRecordingStopRequest();
 }
 
-function handleRemoteStartedRecording() {
-    recordingStatusLabel.innerText = "Recording in Progress...";
+function handleRemoteStartedRecording(sessionId: string) {
+    recordingStatusLabel.innerText = `Recording in Progress for session with id ${sessionId}...`;
     startRercordingButton.disabled = true;
     stopRecordingButton.disabled = false;
 }
 
-function handleRemoteStoppedRecording() {
-    recordingStatusLabel.innerText = "Recording stopped";
+function handleRemoteStoppedRecording(sessionId: string) {
+    recordingStatusLabel.innerText = `Recording stopped for session with id ${sessionId}`;
     startRercordingButton.disabled = false;
     stopRecordingButton.disabled = true;
 }
