@@ -21,7 +21,7 @@ COPY typings/ typings/
 COPY src/*.ts ./src/
 COPY common/*.ts ./common/
 
-ENV PORT 9000
+ENV HTTP_PORT 9000
 ENV RTC_PORTS_BEGIN 9001
 ENV RTC_PORTS_END 9100
 

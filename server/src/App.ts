@@ -1,13 +1,34 @@
-const rtcPortsRangeBegin = parseInt(process.env.RTC_PORTS_BEGIN) || 9002;
-const rtcPortsRangeEnd = parseInt(process.env.RTC_PORTS_END) || 9100;
-console.log(`RTC requests will be handled on ports ${rtcPortsRangeBegin} to ${rtcPortsRangeEnd}`);
-
+import request from "sync-request";
 import MediaServer from "medooze-media-server";
-MediaServer.setPortRange(rtcPortsRangeBegin, rtcPortsRangeEnd);
-const rtcEndpoint = MediaServer.createEndpoint(process.env.PUBLIC_IP || "127.0.0.1");
+import * as WebSockets from "ws";
+import express from "express";
+import bodyParser from 'body-parser';
+import path from "path";
 
 import WSHandler from "./WSHandler";
-import * as WebSockets from "ws";
+
+var publicIPAddress = process.env.PUBLIC_IP_ADDRESS;
+if (!publicIPAddress) {
+    console.log("No Public IP Address provided - Contacting external service to determine Public IP Address...");
+
+    const publicIPAPI = "https://api.bigdatacloud.net/data/client-ip";
+    let publicIPResponse = request("GET", publicIPAPI);
+    if (publicIPResponse.statusCode != 200 || publicIPResponse.isError()) {
+        throw new Error("Execution can not continue. Could not determine public IP Address. Error Code: " + publicIPResponse.statusCode);
+    }
+
+    let publicIPPayload = JSON.parse(publicIPResponse.getBody("utf8"));
+    publicIPAddress = publicIPPayload["ipString"] as string;
+}
+console.log("RTC requests will be handled by Public IP Address: " + publicIPAddress);
+
+const rtcPortsRangeBegin = parseInt(process.env.RTC_PORTS_BEGIN) || 9002;
+const rtcPortsRangeEnd = parseInt(process.env.RTC_PORTS_END) || 9100;
+console.log(`RTC requests will be handled on Ports ${rtcPortsRangeBegin + 1} through ${rtcPortsRangeEnd}`);
+
+MediaServer.setPortRange(rtcPortsRangeBegin, rtcPortsRangeEnd);
+const rtcEndpoint = MediaServer.createEndpoint(publicIPAddress);
+
 const wsPort = parseInt(process.env.WEBSOCKETS_PORT) || 9001;
 const wsServer = new WebSockets.Server({
     port: wsPort,
@@ -19,10 +40,7 @@ wsServer.on("connection", (client: WebSocket) => {
 });
 console.log("WebSockets server listening on port " + wsPort);
 
-import express from "express";
-import bodyParser from 'body-parser';
 const app = express();
-
 app.use(bodyParser.json());
 
 app.use(function(req, res, next) {
@@ -36,7 +54,6 @@ app.get("/ping", (req, res) => {
     res.end();
 });
 
-import path from "path";
 let recordingsPath = path.resolve("./recordings");
 app.use("/recordings", express.static(recordingsPath, {
     fallthrough: false,
@@ -44,6 +61,6 @@ app.use("/recordings", express.static(recordingsPath, {
 }));
 console.log("Serving recording files from " + recordingsPath);
 
-var port = process.env.PORT || 9000;
+var port = process.env.HTTP_PORT || 9000;
 console.log("Web App listening on port " + port);
-app.listen(port); // Use Express as a Janky way to block on a message loop
+app.listen(port);
