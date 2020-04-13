@@ -1,0 +1,38 @@
+apiVersion: v1
+kind: Service
+metadata:
+    name: recorder-http
+spec:
+    selector:
+        app: recorder-app
+    ports:
+        - port: 80
+          targetPort: http
+---
+apiVersion: v1
+kind: Service
+metadata:
+    name: recorder-websockets
+spec:
+    selector: 
+        app: recorder-app
+    ports:
+        - port: 1600
+          targetPort: websockets
+---
+apiVersion: v1
+kind: Service
+metadata:
+    name: recorder-webrtc
+spec:
+    selector:
+        app: recorder-app
+    ports:
+        - port: 1602
+          targetPort: rtcprimary
+          name: rtcprimary
+          protocol: UDP
+        - port: 1603
+          targetPort: rtcaux
+          name: rtcaux
+          protocol: UDP

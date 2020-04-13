@@ -1,0 +1,33 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: recorder-app-pod
+  labels:
+    app: recorder-app
+spec:
+  containers:
+    - name: app
+      image: webrtcrecordersample.azurecr.io/webrtcrecordersample:0.0.3
+      env:
+        - name: HTTP_PORT
+          value: "80"
+        - name: WEBSOCKETS_PORT
+          value: "1600"
+        - name: RTC_PORTS_BEGIN
+          value: "1601"
+        - name: RTC_PORTS_END
+          value: "1603"
+      ports:
+        - name: http
+          containerPort: 80
+        - name: websockets
+          containerPort: 1600
+        - name: rtcprimary
+          containerPort: 1602
+          protocol: UDP
+        - name: rtcaux
+          containerPort: 1603
+          protocol: UDP
+  imagePullSecrets:
+    - name: acr-principal
+    # https://docs.microsoft.com/en-us/azure/container-registry/container-registry-auth-kubernetes
