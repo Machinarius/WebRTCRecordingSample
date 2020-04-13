@@ -54,6 +54,11 @@ app.get("/ping", (req, res) => {
     res.end();
 });
 
+app.get("/", (req, res) => {
+    res.send("PONG");
+    res.end();
+});
+
 let recordingsPath = path.resolve("./recordings");
 app.use("/recordings", express.static(recordingsPath, {
     fallthrough: false,
