@@ -1,5 +1,4 @@
-import SignallingChannel from "./SignallingChannel";
-import RTCConnectionHandler from "./RTCConnectionHandler";
+import LocalRecordingManager from "./LocalRecordingManager";
 
 if (document.readyState === "complete") {
     initSample();
@@ -9,12 +8,12 @@ if (document.readyState === "complete") {
     });
 }
 
+var recordingManager: LocalRecordingManager;
+
 var sessionIdOutput: HTMLElement;
-var createCommsButton: HTMLInputElement;
 var requestCameraButton: HTMLInputElement;
 var requestScreenButton: HTMLInputElement;
-var createConnectionButton: HTMLInputElement;
-var startRercordingButton: HTMLInputElement;
+var startRecordingButton: HTMLInputElement;
 var stopRecordingButton: HTMLInputElement;
 
 var screenOutputElement: HTMLVideoElement;
@@ -27,11 +26,9 @@ var outputContainer: HTMLElement;
 
 function initSample() {
     sessionIdOutput = document.getElementById("sessionid-output") as HTMLElement;
-    createCommsButton = document.getElementById("create-comms") as HTMLInputElement;
     requestCameraButton = document.getElementById("request-camera") as HTMLInputElement;
     requestScreenButton = document.getElementById("request-screenshare") as HTMLInputElement;
-    createConnectionButton = document.getElementById("create-connection") as HTMLInputElement;
-    startRercordingButton = document.getElementById("start-recording") as HTMLInputElement;
+    startRecordingButton = document.getElementById("start-recording") as HTMLInputElement;
     stopRecordingButton = document.getElementById("stop-recording") as HTMLInputElement;
 
     cameraOutputElement = document.getElementById("camera-output") as HTMLVideoElement;
@@ -48,34 +45,15 @@ function initSample() {
     }
 
     browserSupportCheck.checked = true;
-    createCommsButton.disabled = false;
 
-    createCommsButton.onclick = createCommsChannel;
     requestCameraButton.onclick = requestCameraStream;
     requestScreenButton.onclick = requestScreenshare;
-    createConnectionButton.onclick = createRTCConnection;
-    startRercordingButton.onclick = startRecording;
+    startRecordingButton.onclick = startRecording;
     stopRecordingButton.onclick = stopRecording;
 }
 
 function hasGetUserMedia() {
     return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
-}
-
-var signallingChannel: SignallingChannel;
-async function createCommsChannel() {
-    signallingChannel = new SignallingChannel();
-    signallingChannel.onRemoteStartedRecording = handleRemoteStartedRecording;
-    signallingChannel.onRemoteStoppedRecording = handleRemoteStoppedRecording;
-
-    let sessionId = await signallingChannel.waitUntilSessionIsReady();
-    sessionIdOutput.innerText = "Session created with Id: " + sessionId;
-
-    requestCameraButton.checked = true;
-    requestScreenButton.checked = true;
-    createConnectionButton.checked = true;
-    requestCameraButton.disabled = false;
-    requestScreenButton.disabled = false;
 }
 
 var cameraStream: MediaStream;
@@ -94,7 +72,7 @@ async function requestCameraStream() {
     });
     cameraOutputElement.srcObject = cameraStream;
 
-    enableConnectionButton();
+    enableRecordingButton();
 }
 
 async function requestScreenshare() {
@@ -111,89 +89,46 @@ async function requestScreenshare() {
     } as any);
     screenOutputElement.srcObject = screenShareStream;
 
-    enableConnectionButton();
+    enableRecordingButton();
 }
 
-function enableConnectionButton() {
+function enableRecordingButton() {
     if (!cameraStream || !screenShareStream) {
         return;
     }
 
-    createConnectionButton.disabled = false;
-}
-
-let connectionHandler: RTCConnectionHandler;
-async function createRTCConnection() {
-    connectionHandler = new RTCConnectionHandler(signallingChannel);
-    connectionHandler.onRemoteReadyToRecord = handleRemoteReadyToRecord;
-    connectionHandler.setStreams(cameraStream, screenShareStream);
-
-    createConnectionButton.disabled = true;
-    createConnectionButton.innerText = "Connection created";
-}
-
-function handleRemoteReadyToRecord() {
-    startRercordingButton.disabled = false;
-    recordingStatusLabel.innerText = "Ready to Record";
+    startRecordingButton.disabled = false;
+    recordingStatusLabel.innerText = "Idle";
 }
 
 function startRecording() {
-    startRercordingButton.disabled = true;
-    signallingChannel.sendRecordingStartRequest();
+    recordingManager = new LocalRecordingManager(cameraStream, screenShareStream);
+    recordingManager.recordingComplete = onRecordingCompleted;
+    recordingManager.statusChanged = onRecordingStatusChanged;
+    recordingManager.beginRecording();
 
-    clearOutputContainer();
-}
-
-function stopRecording() {
-    stopRecordingButton.disabled = true;
-    signallingChannel.sendRecordingStopRequest();
-}
-
-function handleRemoteStartedRecording(sessionId: string) {
-    recordingStatusLabel.innerText = `Recording in Progress for session with id ${sessionId}...`;
-    startRercordingButton.disabled = true;
+    startRecordingButton.disabled = true;
     stopRecordingButton.disabled = false;
-}
-
-function handleRemoteStoppedRecording(sessionId: string, cameraFiles: string[], screenFiles: string[]) {
-    recordingStatusLabel.innerText = `Recording stopped for session with id ${sessionId}`;
-    startRercordingButton.disabled = false;
-    stopRecordingButton.disabled = true;
-
     clearOutputContainer();
-
-    let outputHeader = document.createElement("p");
-    outputHeader.innerText = "9. Preview recordings";
-    outputContainer.appendChild(outputHeader);
-
-    let cameraHeader = document.createElement("p");
-    cameraHeader.innerText = "Camera recording";
-    outputContainer.appendChild(cameraHeader);
-
-    cameraFiles.forEach(addFileToOutput);
-
-    let screenHeader = document.createElement("p");
-    screenHeader.innerText = "Screen recording";
-    outputContainer.appendChild(screenHeader);
-
-    screenFiles.forEach(addFileToOutput);
 }
 
-function addFileToOutput(filePath: string) {
-    let fileLocation = filePath;
-    if (filePath.startsWith(".")) {
-        fileLocation = filePath.substr(1); // Remove dot from path
-    }
+async function stopRecording() {
+    recordingManager.stopRecording();
+    
+    startRecordingButton.disabled = false;
+    stopRecordingButton.disabled = true;
+}
 
-    if (fileLocation.startsWith("/")) {
-        fileLocation = fileLocation.substr(1); // Remove starting slash
-    }
+async function onRecordingCompleted() {
+    let cameraElement = await recordingManager.getCameraPreviewElement();
+    let screenElement = await recordingManager.getScreenPreviewSource();
 
-    let fileUrl = "http://localhost:9000/" + fileLocation;
-    let videoElement = document.createElement("video") as HTMLVideoElement;
-    videoElement.controls = true;
-    videoElement.src = fileUrl;
-    outputContainer.appendChild(videoElement);
+    outputContainer.appendChild(cameraElement);
+    outputContainer.appendChild(screenElement);
+}
+
+function onRecordingStatusChanged(status: string) {
+    recordingStatusLabel.innerText = status;
 }
 
 function clearOutputContainer() {
