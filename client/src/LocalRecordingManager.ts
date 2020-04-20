@@ -1,3 +1,5 @@
+import axios from "axios";
+
 export default class LocalRecordingManager {
     private cameraRecorder: MediaRecorder;
     private screenRecorder: MediaRecorder;
@@ -115,5 +117,71 @@ export default class LocalRecordingManager {
         videoElement.controls = true;
         
         return videoElement;
+    }
+
+    public async uploadRecordings(progressCallback: (overallProgress: number) => void): Promise<{
+        cameraUrl: string,
+        screenUrl: string
+    }> {
+        if (!this.cameraRecordBlob || !this.screenRecordBlob) {
+            throw new Error("Invalid state - Recording must have finished first");
+        }
+
+        var cameraProgress = 0;
+        var screenProgress = 0;
+
+        function updateProgress(uploadName: "camera" | "screen", progress: number) {
+            switch (uploadName) {
+                case "camera":
+                    cameraProgress = progress;
+                    break;
+                case "screen":
+                    screenProgress = progress;
+                    break;
+                default:
+                    return;
+            }
+
+            let overallProgress = (cameraProgress * 0.5) + (screenProgress * 0.5);
+            progressCallback(overallProgress);
+        }
+
+        let cameraUpload = this.uploadBlob(this.cameraRecordBlob, updateProgress.bind(this, "camera"));
+        let screenUpload = this.uploadBlob(this.screenRecordBlob, updateProgress.bind(this, "screen"));
+        await Promise.all([cameraUpload, screenUpload]);
+
+        let cameraUrl = await cameraUpload;
+        let screenUrl = await screenUpload;
+        return {
+            cameraUrl,
+            screenUrl
+        };
+    }
+
+    private async uploadBlob(blob: Blob, progressCallback: (progress: number) => void): Promise<string> {
+        let blobDataUrl = await new Promise<string>(resolve => {
+            let blobReader = new FileReader();
+            blobReader.addEventListener("load", () => {
+                resolve(blobReader.result as string);
+            });
+            blobReader.readAsDataURL(blob);
+        });
+        
+        // Hardcoded for now
+        let response = await axios.post("http://localhost:9000/recordings", {
+            dataUrl: blobDataUrl
+        }, {
+            onUploadProgress: (progressEvent) => {
+                // Taken from https://gist.github.com/virolea/e1af9359fe071f24de3da3500ff0f429
+                let percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+                progressCallback(percentCompleted);
+            }
+        });
+
+        if (response.status != 200) {
+            throw new Error("Could not upload file");
+        }
+
+        return response.data.resultUrl as string;
     }
 }

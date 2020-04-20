@@ -24,6 +24,15 @@ var recordingStatusLabel: HTMLElement;
 
 var outputContainer: HTMLElement;
 
+var beginUploadButton: HTMLButtonElement;
+var progressContainer: HTMLElement;
+var uploadProgress: HTMLProgressElement;
+var uploadStatusLabel: HTMLElement;
+var urlsContainer: HTMLElement;
+
+var cameraUrlAnchor: HTMLAnchorElement;
+var screenUrlAnchor: HTMLAnchorElement;
+
 function initSample() {
     sessionIdOutput = document.getElementById("sessionid-output") as HTMLElement;
     requestCameraButton = document.getElementById("request-camera") as HTMLInputElement;
@@ -39,6 +48,15 @@ function initSample() {
 
     outputContainer = document.getElementById("output-container") as HTMLElement;
 
+    beginUploadButton = document.getElementById("begin-upload") as HTMLButtonElement;
+    progressContainer = document.getElementById("progress-container") as HTMLElement;
+    uploadProgress = document.getElementById("upload-progress") as HTMLProgressElement;
+    uploadStatusLabel = document.getElementById("upload-status") as HTMLElement;
+    urlsContainer = document.getElementById("urls-container") as HTMLElement;
+
+    cameraUrlAnchor = document.getElementById("camera-url") as HTMLAnchorElement;
+    screenUrlAnchor = document.getElementById("screen-url") as HTMLAnchorElement;
+
     if (!hasGetUserMedia()) {
         browserSupportCheck.checked = false;
         return;
@@ -50,6 +68,7 @@ function initSample() {
     requestScreenButton.onclick = requestScreenshare;
     startRecordingButton.onclick = startRecording;
     stopRecordingButton.onclick = stopRecording;
+    beginUploadButton.onclick = beginUpload;
 }
 
 function hasGetUserMedia() {
@@ -139,6 +158,8 @@ async function onRecordingCompleted() {
         screenElement.play();
     };
     outputContainer.appendChild(syncPlaybackElement);
+
+    beginUploadButton.disabled = false;
 }
 
 function onRecordingStatusChanged(status: string) {
@@ -147,4 +168,36 @@ function onRecordingStatusChanged(status: string) {
 
 function clearOutputContainer() {
     outputContainer.innerHTML = "";
+}
+
+async function beginUpload() {
+    progressContainer.style.display = "block";
+
+    beginUploadButton.disabled = true;
+    uploadProgress.value = 0;
+    uploadStatusLabel.innerText = "Uploading data...";
+
+    var uploadResult: {
+        cameraUrl: string,
+        screenUrl: string
+    };
+
+    try {
+        uploadResult = await recordingManager.uploadRecordings((progress) => uploadProgress.value = progress);
+    } catch (error) {
+        uploadProgress.value = 0;
+        uploadStatusLabel.innerText = "Upload failed - Try again please";
+
+        console.error(error);
+        return;
+    }
+
+    uploadStatusLabel.innerText = "Upload complete";
+    urlsContainer.style.display = "block";
+
+    cameraUrlAnchor.innerText = uploadResult.cameraUrl;
+    cameraUrlAnchor.href = uploadResult.cameraUrl;
+
+    screenUrlAnchor.innerText = uploadResult.screenUrl;
+    screenUrlAnchor.href = uploadResult.screenUrl;
 }

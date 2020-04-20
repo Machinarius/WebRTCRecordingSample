@@ -30,15 +30,21 @@
         <p>6. Stop recording</p>
         <button id="stop-recording" disabled>Stop recording</button>
 
-        <p>7. Upload Result</p>
-        <button id="upload-result" disabled>Begin Upload</button>
-
-        <p>8. Preview results</p>
+        <p>7. Preview results</p>
         <div id="output-container"></div>
+
+        <p>8. Upload Result</p>
+        <button id="begin-upload" disabled>Begin Upload</button>
 
         <div id="progress-container" style="display: none;">
             <p>9. Upload progress</p>
-            <progress id="upload-progress"></progress>
+            <progress id="upload-progress" max="100"></progress>
+            <p id="upload-status"></p>
+
+            <div id="urls-container" style="display: none;">
+                <p>Camera file: <a id="camera-url"></a></p>
+                <p>Screen file: <a id="screen-url"></a></p>
+            </div>
         </div>
     </body>
 </html>
