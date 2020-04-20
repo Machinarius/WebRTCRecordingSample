@@ -187,6 +187,7 @@ async function beginUpload() {
     } catch (error) {
         uploadProgress.value = 0;
         uploadStatusLabel.innerText = "Upload failed - Try again please";
+        beginUploadButton.disabled = false;
 
         console.error(error);
         return;

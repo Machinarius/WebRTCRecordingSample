@@ -7,13 +7,14 @@
         {
             "type": "node",
             "request": "launch",
-            "name": "Launch Program",
+            "name": "Launch Server",
             "runtimeArgs": ["-r", "ts-node/register"],
             "skipFiles": [
                 "<node_internals>/**",
                 "node_modules/**"
             ],
-            "args": ["${workspaceFolder}\\index.ts"]
+            "args": ["${workspaceFolder}\\server\\src\\App.ts"],
+            "cwd": "${workspaceFolder}\\server"
         }
     ]
 }
