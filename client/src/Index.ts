@@ -125,6 +125,20 @@ async function onRecordingCompleted() {
 
     outputContainer.appendChild(cameraElement);
     outputContainer.appendChild(screenElement);
+
+    let syncPlaybackElement = document.createElement("button") as HTMLInputElement;
+    syncPlaybackElement.innerText = "Play simultaneously";
+    syncPlaybackElement.onclick = () => {
+        cameraElement.pause();
+        screenElement.pause();
+
+        cameraElement.currentTime = 0;
+        screenElement.currentTime = 0;
+
+        cameraElement.play();
+        screenElement.play();
+    };
+    outputContainer.appendChild(syncPlaybackElement);
 }
 
 function onRecordingStatusChanged(status: string) {
