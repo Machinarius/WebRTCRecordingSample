@@ -38,6 +38,9 @@ export default function RecordingReceiver(tempIncomingPath: string) {
         let cameraPath = path.join(tempIncomingPath, cameraFilename);
         let screenPath = path.join(tempIncomingPath, screenFilename);
 
+        console.log("Trying to write incoming file to " + cameraPath);
+        console.log("Trying to write incoming file to " + screenPath);
+
         await cameraFile.mv(cameraPath);
         await screenFile.mv(screenPath);
 

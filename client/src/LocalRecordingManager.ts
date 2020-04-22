@@ -131,8 +131,7 @@ export default class LocalRecordingManager {
         formData.append("camera", this.cameraRecordBlob);
         formData.append("screen", this.screenRecordBlob);
         
-        // Hardcoded for now
-        let response = await axios("http://localhost:9000/recordings", {
+        let response = await axios("/recordings", {
             method: "POST",
             data: formData,
             headers: { "Content-Type": "multipart/form-data" },

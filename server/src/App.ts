@@ -36,11 +36,6 @@ app.get("/ping", (req, res) => {
     res.end();
 });
 
-app.get("/", (req, res) => {
-    res.send("PONG");
-    res.end();
-});
-
 let recordingsPath = path.resolve(process.env.INCOMING_TEMP_FOLDER);
 app.post("/recordings", RecordingReceiver(recordingsPath));
 console.log("Storing incoming recording files temporarily into " + recordingsPath);
@@ -48,6 +43,8 @@ console.log("Storing incoming recording files temporarily into " + recordingsPat
 app.use(RecordingServer.Route, RecordingServer.MiddlewareFunc);
 console.log("Serving recording files from S3 Bucket " + process.env.S3_TARGET_BUCKET);
 
-var port = process.env.HTTP_PORT || 9000;
-console.log("Web App listening on port " + port);
-app.listen(port);
+app.use("/", express.static("frontend", {
+    fallthrough: false
+}));
+
+export default app;
