@@ -5,11 +5,7 @@
       "target": "es6",
       "moduleResolution": "node",
       "sourceMap": true,
-      "outDir": "dist",
-      "typeRoots": [
-        "./typings",
-        "./node_modules/@types*"
-      ]
+      "outDir": "dist"
     },
     "lib": ["es2015"]
   }
