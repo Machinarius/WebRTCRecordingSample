@@ -10,12 +10,12 @@ export default class LocalRecordingManager {
     public statusChanged?: (status: string) => void; 
     public recordingComplete?: () => void;
 
-    constructor(cameraStream: MediaStream, screenShareStream: MediaStream) {
+    constructor(cameraStream: MediaStream, screenShareStream: MediaStream, recordingMimeType: string) {
         this.cameraRecorder = new MediaRecorder(cameraStream, {
-            mimeType: "video/webm"
+            mimeType: recordingMimeType
         });
         this.screenRecorder = new MediaRecorder(screenShareStream, {
-            mimeType: "video/webm"
+            mimeType: recordingMimeType
         });
 
         // These should only fire once as we are not specifying a time slice

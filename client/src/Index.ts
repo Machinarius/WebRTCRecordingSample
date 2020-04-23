@@ -71,8 +71,28 @@ function initSample() {
     beginUploadButton.onclick = beginUpload;
 }
 
-function hasGetUserMedia() {
-    return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+var supportedWebMRecordingMIMEType: string | undefined;
+const knownWebMMIMETypes = [
+    'video/webm', // Implicit codec selection. Firefox likes this input
+    'video/webm\;codecs=vp9', 
+    'video/webm\;codecs=vp8', 
+    'video/webm\;codecs="vp9, vorbis"', 
+    'video/webm\;codecs="vp8, vorbis"', 
+    'video/webm\;codecs="vp9, opus"', 
+    'video/webm\;codecs="vp8, opus"', 
+    'video/webm\;codecs=daala', 
+    'video/webm\;codecs=h264', 
+    'audio/webm\;codecs=opus', 
+    'video/mpeg'
+];
+
+function hasGetUserMedia(): boolean {
+    let mediaDevices = navigator.mediaDevices as any;
+    let captureApisSupported = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && mediaDevices.getDisplayMedia);
+
+    supportedWebMRecordingMIMEType = knownWebMMIMETypes.find(MediaRecorder.isTypeSupported);
+    console.log("Chosen recording codec: " + supportedWebMRecordingMIMEType);
+    return captureApisSupported && !!(supportedWebMRecordingMIMEType);
 }
 
 var cameraStream: MediaStream;
@@ -101,11 +121,16 @@ async function requestScreenshare() {
         });
     }
 
-    screenShareStream = await navigator.mediaDevices.getUserMedia({
+    let mediaDevices = navigator.mediaDevices as any;
+    screenShareStream = await mediaDevices.getDisplayMedia({
         video: {
-            mediaSource: 'screen'
+            cursor: "always"
+        },
+        audio: {
+            echoCancellation: true,
+            noiseSuppression: true
         }
-    } as any);
+    });
     screenOutputElement.srcObject = screenShareStream;
 
     enableRecordingButton();
@@ -121,7 +146,7 @@ function enableRecordingButton() {
 }
 
 function startRecording() {
-    recordingManager = new LocalRecordingManager(cameraStream, screenShareStream);
+    recordingManager = new LocalRecordingManager(cameraStream, screenShareStream, supportedWebMRecordingMIMEType!);
     recordingManager.recordingComplete = onRecordingCompleted;
     recordingManager.statusChanged = onRecordingStatusChanged;
     recordingManager.beginRecording();
