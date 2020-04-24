@@ -33,11 +33,11 @@ provider:
     - Effect: "Allow"
       Action:
         - "s3:PutObject"
-      Resource: "arn:aws:s3:::browserrecordingsdemo"
+      Resource: "*"
     - Effect: "Allow"
       Action:
         - "s3:GetObject"
-      Resource: "arn:aws:s3:::browserrecordingsdemo"
+      Resource: "*"
 
 # you can define service wide environment variables here
   environment:
@@ -68,7 +68,7 @@ functions:
           method: post
           cors: true
       - http:
-          path: recordings/{filename}
+          path: recordings/ticket
           method: get
           cors: true
       - http:

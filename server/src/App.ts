@@ -2,12 +2,11 @@ import * as DotEnv from "dotenv";
 DotEnv.config();
 
 import express from "express";
-import path from "path";
 import fs from "fs";
 
 import fileUpload from "express-fileupload";
-import RecordingReceiver from "./RecordingFileReceiver";
 import * as RecordingServer from "./RecordingFileServer";
+import * as RecordingsTicketer from "./RecordingsTicketer";
 
 if (!process.env.INCOMING_TEMP_FOLDER || !fs.existsSync(process.env.INCOMING_TEMP_FOLDER)) {
     throw new Error("Make sure INCOMING_TEMP_FOLDER is defined in the .env file, and that it points to a valid writeable folder");
@@ -36,10 +35,7 @@ app.get("/ping", (req, res) => {
     res.end();
 });
 
-let recordingsPath = path.resolve(process.env.INCOMING_TEMP_FOLDER);
-app.post("/recordings", RecordingReceiver(recordingsPath));
-console.log("Storing incoming recording files temporarily into " + recordingsPath);
-
+app.get(RecordingsTicketer.Route, RecordingsTicketer.MiddlewareFunc);
 app.use(RecordingServer.Route, RecordingServer.MiddlewareFunc);
 console.log("Serving recording files from S3 Bucket " + process.env.S3_TARGET_BUCKET);
 

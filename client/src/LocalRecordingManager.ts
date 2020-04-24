@@ -1,4 +1,4 @@
-import axios from "axios";
+import axios, { AxiosPromise } from "axios";
 
 export default class LocalRecordingManager {
     private cameraRecorder: MediaRecorder;
@@ -127,28 +127,72 @@ export default class LocalRecordingManager {
             throw new Error("Invalid state - Recording must have finished first");
         }
 
-        let formData = new FormData();
-        formData.append("camera", this.cameraRecordBlob);
-        formData.append("screen", this.screenRecordBlob);
-        
-        let response = await axios("/recordings", {
-            method: "POST",
-            data: formData,
-            headers: { "Content-Type": "multipart/form-data" },
-            onUploadProgress: (progressEvent) => {
-                // Taken from https://gist.github.com/virolea/e1af9359fe071f24de3da3500ff0f429
-                let percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-                progressCallback(percentCompleted);
-            }
+        let appBase = window.location.pathname;
+        if (appBase.endsWith("/")) {
+            appBase = appBase.substr(0, appBase.length - 1);
+        }
+
+        let recordingTicketResponse = await axios(appBase + "/recordings/ticket", {
+            method: "GET"
         });
 
-        if (response.status != 200) {
-            throw new Error("Could not upload file");
+        if (recordingTicketResponse.status != 200) {
+            throw new Error("Could not create an upload ticket");
+        }
+
+        var cameraProgress = 0;
+        var screenProgress = 0;
+
+        function fireProgressCallback(fileName: "camera" | "screen", progressValue: number) {
+            switch (fileName) {
+                case "camera":
+                    cameraProgress = progressValue;
+                    break;
+                case "screen":
+                    screenProgress = progressValue;
+                    break;
+                default:
+                    return;
+            }
+
+            progressCallback(cameraProgress * 0.5 + screenProgress * 0.5);
+        }
+
+        function uploadRecording(url: string, blob: Blob, fileName: "camera" | "screen"): AxiosPromise<any> {
+            return axios(url, {
+                method: "PUT",
+                data: blob,
+                onUploadProgress: (progressEvent) => {
+                    // Taken from https://gist.github.com/virolea/e1af9359fe071f24de3da3500ff0f429
+                    let percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+                    fireProgressCallback(fileName, percentCompleted);
+                }
+            });
+        }
+
+        let recordingTicket = recordingTicketResponse.data as UploadTicket;
+        let cameraUpload = uploadRecording(recordingTicket.putUrls.camera, this.cameraRecordBlob, "camera");
+        let screenUpload = uploadRecording(recordingTicket.putUrls.screen, this.screenRecordBlob, "screen");
+        let [cameraResponse, screenResponse] = await Promise.all([cameraUpload, screenUpload]);
+
+        if (cameraResponse.status != 200 || screenResponse.status != 200) {
+            throw new Error("Could not upload files to destination urls");
         }
 
         return {
-            cameraUrl: response.data.cameraUrl as string,
-            screenUrl: response.data.screenUrl as string
+            cameraUrl: recordingTicket.getUrls.camera,
+            screenUrl: recordingTicket.getUrls.screen
         };
+    }
+}
+
+interface UploadTicket {
+    putUrls: {
+        camera: string,
+        screen: string
+    },
+    getUrls: {
+        camera: string,
+        screen: string
     }
 }
