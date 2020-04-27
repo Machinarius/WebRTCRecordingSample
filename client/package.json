@@ -12,6 +12,8 @@
     "webpack-cli": "^3.3.11"
   },
   "dependencies": {
-    "axios": "^0.19.2"
+    "axios": "^0.19.2",
+    "recordrtc": "^5.5.9",
+    "webrtc-adapter": "^7.5.1"
   }
 }

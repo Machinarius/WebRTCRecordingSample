@@ -1,3 +1,6 @@
+import adapter from "webrtc-adapter";
+console.log(`WebRTC shims applied on ${adapter.browserDetails.browser} v${adapter.browserDetails.version}`);
+
 import LocalRecordingManager from "./LocalRecordingManager";
 
 if (document.readyState === "complete") {
@@ -66,12 +69,12 @@ function initSample() {
 var supportedWebMRecordingMIMEType: string | undefined;
 const knownWebMMIMETypes = [
     'video/webm', // Implicit codec selection. Firefox likes this input
+    'video/webm\;codecs="vp9,vorbis"', 
+    'video/webm\;codecs="vp9,opus"', 
+    'video/webm\;codecs="vp8,vorbis"', 
+    'video/webm\;codecs="vp8,opus"', 
     'video/webm\;codecs=vp9', 
     'video/webm\;codecs=vp8', 
-    'video/webm\;codecs="vp9, vorbis"', 
-    'video/webm\;codecs="vp8, vorbis"', 
-    'video/webm\;codecs="vp9, opus"', 
-    'video/webm\;codecs="vp8, opus"', 
     'video/webm\;codecs=daala', 
     'video/webm\;codecs=h264', 
     'audio/webm\;codecs=opus', 
@@ -80,7 +83,7 @@ const knownWebMMIMETypes = [
 
 function hasGetUserMedia(): boolean {
     let captureApisSupported = !!(navigator.mediaDevices.getUserMedia);
-    let recordingApisSupported = !!(MediaRecorder) && !!(
+    let recordingApisSupported = !!(MediaRecorder) && !!(MediaSource) && !!(
         supportedWebMRecordingMIMEType = knownWebMMIMETypes.find(mimeType => MediaRecorder.isTypeSupported(mimeType) && MediaSource.isTypeSupported(mimeType))
     );
 

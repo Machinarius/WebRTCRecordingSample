@@ -1,7 +1,8 @@
-import axios, { AxiosPromise } from "axios";
+import axios from "axios";
+import { RecordRTCPromisesHandler } from "recordrtc";
 
 export default class LocalRecordingManager {
-    private cameraRecorder: MediaRecorder;
+    private cameraRecorder: any;
 
     private isRecording: boolean;
     private hasRecordedData: boolean;
@@ -9,25 +10,22 @@ export default class LocalRecordingManager {
     public statusChanged?: (status: string) => void; 
     public recordingComplete?: () => void;
 
-    constructor(cameraStream: MediaStream, recordingMimeType: string) {
-        this.cameraRecorder = new MediaRecorder(cameraStream, {
+    constructor(cameraStream: MediaStream, private recordingMimeType: string) {
+        this.cameraRecorder = new RecordRTCPromisesHandler(cameraStream, {
+            type: "video",
             mimeType: recordingMimeType
         });
-
-        // These should only fire once as we are not specifying a time slice
-        // Possible optimization here?
-        this.cameraRecorder.ondataavailable = this.onCameraDataAvailable.bind(this);
 
         this.isRecording = false;
         this.hasRecordedData = false;
     }
 
-    public beginRecording() {
+    public async beginRecording() {
         if (this.isRecording || this.hasRecordedData) {
             throw new Error("Invalid state - Recording in progress or finished");
         }
 
-        this.cameraRecorder.start();
+        await this.cameraRecorder.startRecording();
         this.isRecording = true;
 
         if (this.statusChanged) {
@@ -35,22 +33,18 @@ export default class LocalRecordingManager {
         }
     }
 
-    public stopRecording() {
+    private cameraRecordBlob?: Blob;
+
+    public async stopRecording() {
         if (this.statusChanged) {
             this.statusChanged("Stopping...");
         }
 
-        // Do NOT call requestData here - MediaRecorder#stop implies it
+        await this.cameraRecorder.stopRecording() as Promise<void>;
+        this.cameraRecordBlob = await this.cameraRecorder.getBlob() as Blob;
 
-        this.cameraRecorder.stop();
         this.isRecording = false;
         this.hasRecordedData = true;
-    }
-
-    private cameraRecordBlob?: Blob;
-
-    private onCameraDataAvailable(event: BlobEvent) {
-        this.cameraRecordBlob = event.data;
 
         if (this.statusChanged) {
             this.statusChanged("Recording completed");
@@ -60,7 +54,7 @@ export default class LocalRecordingManager {
             this.recordingComplete();
         }
     }
-    
+
     public async getCameraPreviewElement(): Promise<HTMLVideoElement> {
         if (!this.cameraRecordBlob) {
             throw new Error("Invalid state - Recording must have finished first");
@@ -74,7 +68,7 @@ export default class LocalRecordingManager {
         videoElement.controls = true;
 
         mediaSource.addEventListener("sourceopen", (_event) => {
-            let sourceBuffer = mediaSource.addSourceBuffer(this.cameraRecorder.mimeType);
+            let sourceBuffer = mediaSource.addSourceBuffer(this.recordingMimeType);
             sourceBuffer.addEventListener("updateend", (_sbEvent) => {
                 mediaSource.endOfStream();
             });
