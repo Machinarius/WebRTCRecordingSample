@@ -87,12 +87,26 @@ const knownWebMMIMETypes = [
 ];
 
 function hasGetUserMedia(): boolean {
-    let mediaDevices = navigator.mediaDevices as any;
-    let captureApisSupported = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && mediaDevices.getDisplayMedia);
+    let captureApisSupported = !!(navigator.mediaDevices.getUserMedia && (navigator.mediaDevices as any).getDisplayMedia);
+    let recordingApisSupported = !!(MediaRecorder) && !!(
+        supportedWebMRecordingMIMEType = knownWebMMIMETypes.find(mimeType => MediaRecorder.isTypeSupported(mimeType) && MediaSource.isTypeSupported(mimeType))
+    );
 
-    supportedWebMRecordingMIMEType = knownWebMMIMETypes.find(MediaRecorder.isTypeSupported);
+    let compatIssuesContainer = document.getElementById("compatibility-issues")!;
+    if (!captureApisSupported) {
+        let messageElement = document.createElement("p");
+        messageElement.innerText = "Your browser does not seem to support the capture APIs required";
+        compatIssuesContainer.appendChild(messageElement);
+    }
+
+    if (!recordingApisSupported) {
+        let messageElement = document.createElement("p");
+        messageElement.innerText = "Your browser does not seem to support the video recording APIs required";
+        compatIssuesContainer.appendChild(messageElement);
+    }
+
     console.log("Chosen recording codec: " + supportedWebMRecordingMIMEType);
-    return captureApisSupported && !!(supportedWebMRecordingMIMEType);
+    return captureApisSupported && recordingApisSupported;
 }
 
 var cameraStream: MediaStream;
@@ -121,8 +135,7 @@ async function requestScreenshare() {
         });
     }
 
-    let mediaDevices = navigator.mediaDevices as any;
-    screenShareStream = await mediaDevices.getDisplayMedia({
+    screenShareStream = await (navigator.mediaDevices as any).getDisplayMedia({
         video: {
             cursor: "always"
         },

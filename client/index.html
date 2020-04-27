@@ -9,18 +9,19 @@
     <body>
         <p>0. Does the browser support the MediaStream APIs?</p>
         <input type="checkbox" disabled id="browser-support" />
+        <div id="compatibility-issues"></div>
 
         <p>1. Request camera permissions</p>
         <button id="request-camera">Request permissions</button>
 
         <p>2. See camera output</p>
-        <video id="camera-output" width="800" height="450" autoplay></video>
+        <video id="camera-output" width="800" height="450" autoplay muted></video>
 
         <p>3. Request screen sharing</p>
         <button id="request-screenshare">Request permission</button>
 
         <p>4. See screensharing output</p>
-        <video id="screen-output" width="800" height="450" autoplay></video>
+        <video id="screen-output" width="800" height="450" autoplay muted></video>
 
         <p>5. Start recording</p>
         <button id="start-recording" disabled>Start recording</button>

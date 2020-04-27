@@ -88,7 +88,7 @@ export default class LocalRecordingManager {
             throw new Error("Invalid state - Recording must have finished first");
         }
 
-        return await this.createVideoElementFromBlob(this.cameraRecordBlob, this.cameraRecorder.mimeType);
+        return await this.createVideoElementFromBlob(this.cameraRecordBlob, this.cameraRecorder.mimeType, "camera");
     }
 
     public async getScreenPreviewSource(): Promise<HTMLVideoElement> {
@@ -96,13 +96,18 @@ export default class LocalRecordingManager {
             throw new Error("Invalid state - Recording must have finished first");
         }
 
-        return await this.createVideoElementFromBlob(this.screenRecordBlob, this.screenRecorder.mimeType);
+        return await this.createVideoElementFromBlob(this.screenRecordBlob, this.screenRecorder.mimeType, "screen");
     }
 
-    private async createVideoElementFromBlob(recordBlob: Blob, mimeType: string): Promise<HTMLVideoElement> {
+    private async createVideoElementFromBlob(recordBlob: Blob, mimeType: string, streamName: "camera" | "screen"): Promise<HTMLVideoElement> {
         let mediaData = await recordBlob.arrayBuffer();
 
         let mediaSource = new MediaSource();
+        let videoElement = document.createElement("video") as HTMLVideoElement;
+        videoElement.src = URL.createObjectURL(mediaSource);
+        videoElement.controls = true;
+        videoElement.dataset.streamName = streamName;
+
         mediaSource.addEventListener("sourceopen", (_event) => {
             let sourceBuffer = mediaSource.addSourceBuffer(mimeType);
             sourceBuffer.addEventListener("updateend", (_sbEvent) => {
@@ -111,10 +116,6 @@ export default class LocalRecordingManager {
 
             sourceBuffer.appendBuffer(mediaData);
         });
-
-        let videoElement = document.createElement("video") as HTMLVideoElement;
-        videoElement.src = URL.createObjectURL(mediaSource);
-        videoElement.controls = true;
         
         return videoElement;
     }
