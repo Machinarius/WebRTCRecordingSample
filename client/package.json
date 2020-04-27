@@ -6,12 +6,20 @@
   "devDependencies": {
     "@types/axios": "^0.14.0",
     "@types/dom-mediacapture-record": "^1.0.4",
+    "@types/video.js": "^7.3.8",
+    "css-loader": "^3.5.3",
+    "scss-loader": "^0.0.1",
+    "style-loader": "^1.2.0",
     "ts-loader": "^6.2.2",
     "typescript": "^3.8.3",
     "webpack": "^4.42.1",
     "webpack-cli": "^3.3.11"
   },
   "dependencies": {
-    "axios": "^0.19.2"
+    "axios": "^0.19.2",
+    "recordrtc": "^5.5.9",
+    "video.js": "^7.7.5",
+    "videojs-record": "^3.11.0",
+    "webrtc-adapter": "^7.5.1"
   }
 }

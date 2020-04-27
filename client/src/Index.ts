@@ -1,3 +1,5 @@
+import "../node_modules/video.js/dist/video-js.min.css";
+
 import LocalRecordingManager from "./LocalRecordingManager";
 
 if (document.readyState === "complete") {
