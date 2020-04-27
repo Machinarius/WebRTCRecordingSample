@@ -4,7 +4,6 @@ DotEnv.config();
 import express from "express";
 import fs from "fs";
 
-import fileUpload from "express-fileupload";
 import * as RecordingServer from "./RecordingFileServer";
 import * as RecordingsTicketer from "./RecordingsTicketer";
 
@@ -27,8 +26,6 @@ app.use(function(req, res, next) {
 
     next();
 });
-
-app.use(fileUpload());
 
 app.get("/ping", (req, res) => {
     res.send("PONG");

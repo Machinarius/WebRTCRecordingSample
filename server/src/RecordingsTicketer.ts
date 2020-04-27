@@ -23,7 +23,6 @@ export const Route = "/recordings/ticket";
 export let MiddlewareFunc: Handler = async (req: Request, res: Response, next: NextFunction) => {
     let ticketId = uuid.v4();
     let cameraKey = "camera-" + ticketId + ".webm";
-    let screenKey = "screen-" + ticketId + ".webm";
 
     function getSignedUrl(key: string, action: "getObject" | "putObject"): Promise<string> {
         return S3.getSignedUrlPromise(action, {
@@ -33,15 +32,14 @@ export let MiddlewareFunc: Handler = async (req: Request, res: Response, next: N
         });
     };
 
+    let [cameraGet, cameraPut] = await Promise.all([
+        await getSignedUrl(cameraKey, "getObject"),
+        await getSignedUrl(cameraKey, "putObject")
+    ])
+
     let response = {
-        putUrls: {
-            camera: await getSignedUrl(cameraKey, "putObject"),
-            screen: await getSignedUrl(screenKey, "putObject")
-        },
-        getUrls: {
-            camera: await getSignedUrl(cameraKey, "getObject"),
-            screen: await getSignedUrl(screenKey, "getObject")
-        }
+        putUrl: cameraPut,
+        getUrl: cameraGet
     };
 
     res.status(200).contentType("application/json").send(response);

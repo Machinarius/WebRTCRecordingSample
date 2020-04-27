@@ -17,34 +17,27 @@
         <p>2. See camera output</p>
         <video id="camera-output" width="800" height="450" autoplay muted></video>
 
-        <p>3. Request screen sharing</p>
-        <button id="request-screenshare">Request permission</button>
-
-        <p>4. See screensharing output</p>
-        <video id="screen-output" width="800" height="450" autoplay muted></video>
-
-        <p>5. Start recording</p>
+        <p>3. Start recording</p>
         <button id="start-recording" disabled>Start recording</button>
 
         <p>Recording status: <span id="recording-status">Not possible yet</span></p>
 
-        <p>6. Stop recording</p>
+        <p>4. Stop recording</p>
         <button id="stop-recording" disabled>Stop recording</button>
 
-        <p>7. Preview results</p>
+        <p>5. Preview results</p>
         <div id="output-container"></div>
 
-        <p>8. Upload Result</p>
+        <p>6. Upload Result</p>
         <button id="begin-upload" disabled>Begin Upload</button>
 
         <div id="progress-container" style="display: none;">
-            <p>9. Upload progress</p>
+            <p>7. Upload progress</p>
             <progress id="upload-progress" max="100"></progress>
             <p id="upload-status"></p>
 
             <div id="urls-container" style="display: none;">
                 <p>Camera file: <a id="camera-url"></a></p>
-                <p>Screen file: <a id="screen-url"></a></p>
             </div>
         </div>
     </body>
