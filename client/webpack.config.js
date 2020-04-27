@@ -22,7 +22,12 @@ module.exports = {
     ],
   },
   resolve: {
-    extensions: [ '.tsx', '.ts', '.js', ".css", ".scss" ]
+    extensions: [ '.tsx', '.ts', '.js', ".css", ".scss" ],
+    alias: {
+      videojs: 'video.js',
+      WaveSurfer: 'wavesurfer.js',
+      RecordRTC: 'recordrtc'
+    }
   },
   output: {
     filename: 'bundle.js',

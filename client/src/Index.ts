@@ -1,4 +1,10 @@
-import "../node_modules/video.js/dist/video-js.min.css";
+import "video.js/dist/video-js.min.css";
+import 'videojs-record/dist/css/videojs.record.css';
+
+import 'webrtc-adapter';
+import videojs, { VideoJsPlayer, VideoJsPlayerOptions } from "video.js";
+import 'recordrtc';
+import 'videojs-record';
 
 import LocalRecordingManager from "./LocalRecordingManager";
 
@@ -104,6 +110,7 @@ function hasGetUserMedia(): boolean {
 }
 
 var cameraStream: MediaStream;
+var cameraPlayer: VideoJsPlayer;
 
 async function requestCameraStream() {
     if (cameraStream) {
@@ -116,7 +123,36 @@ async function requestCameraStream() {
         audio: true,
         video: true
     });
-    cameraOutputElement.srcObject = cameraStream;
+    cameraPlayer = await new Promise<VideoJsPlayer>((resolve, reject) => {
+        let options: VideoJsPlayerOptions = {
+            controls: true,
+            autoplay: false,
+            fluid: false,
+            loop: false,
+            width: 320,
+            height: 240,
+            src: cameraStream as any,
+            plugins: {
+                // configure videojs-record plugin
+                record: {
+                    audio: true,
+                    video: true,
+                    debug: true
+                }
+            }
+        };
+
+        var player: VideoJsPlayer;
+        try {
+            player = videojs("camera-output", options, () => {
+                resolve(player);
+            });
+        } catch (error) {
+            reject(error);
+        }
+    });
+
+    cameraPlayer.src(cameraStream as any);
 
     startRecordingButton.disabled = false;
     recordingStatusLabel.innerText = "Idle";
