@@ -14,11 +14,9 @@ var recordingManager: LocalRecordingManager;
 
 var sessionIdOutput: HTMLElement;
 var requestCameraButton: HTMLInputElement;
-var requestScreenButton: HTMLInputElement;
 var startRecordingButton: HTMLInputElement;
 var stopRecordingButton: HTMLInputElement;
 
-var screenOutputElement: HTMLVideoElement;
 var cameraOutputElement: HTMLVideoElement;
 
 var browserSupportCheck: HTMLInputElement;
@@ -33,17 +31,13 @@ var uploadStatusLabel: HTMLElement;
 var urlsContainer: HTMLElement;
 
 var cameraUrlAnchor: HTMLAnchorElement;
-var screenUrlAnchor: HTMLAnchorElement;
-
 function initSample() {
     sessionIdOutput = document.getElementById("sessionid-output") as HTMLElement;
     requestCameraButton = document.getElementById("request-camera") as HTMLInputElement;
-    requestScreenButton = document.getElementById("request-screenshare") as HTMLInputElement;
     startRecordingButton = document.getElementById("start-recording") as HTMLInputElement;
     stopRecordingButton = document.getElementById("stop-recording") as HTMLInputElement;
 
     cameraOutputElement = document.getElementById("camera-output") as HTMLVideoElement;
-    screenOutputElement = document.getElementById("screen-output") as HTMLVideoElement;
 
     browserSupportCheck = document.getElementById("browser-support") as HTMLInputElement;
     recordingStatusLabel = document.getElementById("recording-status") as HTMLElement;
@@ -57,7 +51,6 @@ function initSample() {
     urlsContainer = document.getElementById("urls-container") as HTMLElement;
 
     cameraUrlAnchor = document.getElementById("camera-url") as HTMLAnchorElement;
-    screenUrlAnchor = document.getElementById("screen-url") as HTMLAnchorElement;
 
     if (!hasGetUserMedia()) {
         browserSupportCheck.checked = false;
@@ -67,7 +60,6 @@ function initSample() {
     browserSupportCheck.checked = true;
 
     requestCameraButton.onclick = requestCameraStream;
-    requestScreenButton.onclick = requestScreenshare;
     startRecordingButton.onclick = startRecording;
     stopRecordingButton.onclick = stopRecording;
     beginUploadButton.onclick = beginUpload;
@@ -89,7 +81,7 @@ const knownWebMMIMETypes = [
 ];
 
 function hasGetUserMedia(): boolean {
-    let captureApisSupported = !!(navigator.mediaDevices.getUserMedia && (navigator.mediaDevices as any).getDisplayMedia);
+    let captureApisSupported = !!(navigator.mediaDevices.getUserMedia);
     let recordingApisSupported = !!(MediaRecorder) && !!(
         supportedWebMRecordingMIMEType = knownWebMMIMETypes.find(mimeType => MediaRecorder.isTypeSupported(mimeType) && MediaSource.isTypeSupported(mimeType))
     );
@@ -112,7 +104,6 @@ function hasGetUserMedia(): boolean {
 }
 
 var cameraStream: MediaStream;
-var screenShareStream: MediaStream;
 
 async function requestCameraStream() {
     if (cameraStream) {
@@ -127,41 +118,12 @@ async function requestCameraStream() {
     });
     cameraOutputElement.srcObject = cameraStream;
 
-    enableRecordingButton();
-}
-
-async function requestScreenshare() {
-    if (screenShareStream) {
-        screenShareStream.getTracks().forEach(function(track) {
-            track.stop();
-        });
-    }
-
-    screenShareStream = await (navigator.mediaDevices as any).getDisplayMedia({
-        video: {
-            cursor: "always"
-        },
-        audio: {
-            echoCancellation: true,
-            noiseSuppression: true
-        }
-    });
-    screenOutputElement.srcObject = screenShareStream;
-
-    enableRecordingButton();
-}
-
-function enableRecordingButton() {
-    if (!cameraStream || !screenShareStream) {
-        return;
-    }
-
     startRecordingButton.disabled = false;
     recordingStatusLabel.innerText = "Idle";
 }
 
 function startRecording() {
-    recordingManager = new LocalRecordingManager(cameraStream, screenShareStream, supportedWebMRecordingMIMEType!);
+    recordingManager = new LocalRecordingManager(cameraStream, supportedWebMRecordingMIMEType!);
     recordingManager.recordingComplete = onRecordingCompleted;
     recordingManager.statusChanged = onRecordingStatusChanged;
     recordingManager.beginRecording();
@@ -180,24 +142,7 @@ async function stopRecording() {
 
 async function onRecordingCompleted() {
     let cameraElement = await recordingManager.getCameraPreviewElement();
-    let screenElement = await recordingManager.getScreenPreviewSource();
-
     outputContainer.appendChild(cameraElement);
-    outputContainer.appendChild(screenElement);
-
-    let syncPlaybackElement = document.createElement("button") as HTMLInputElement;
-    syncPlaybackElement.innerText = "Play simultaneously";
-    syncPlaybackElement.onclick = () => {
-        cameraElement.pause();
-        screenElement.pause();
-
-        cameraElement.currentTime = 0;
-        screenElement.currentTime = 0;
-
-        cameraElement.play();
-        screenElement.play();
-    };
-    outputContainer.appendChild(syncPlaybackElement);
 
     beginUploadButton.disabled = false;
 }
@@ -217,13 +162,10 @@ async function beginUpload() {
     uploadProgress.value = 0;
     uploadStatusLabel.innerText = "Uploading data...";
 
-    var uploadResult: {
-        cameraUrl: string,
-        screenUrl: string
-    };
+    var cameraDownloadUrl: string;
 
     try {
-        uploadResult = await recordingManager.uploadRecordings((progress) => uploadProgress.value = progress);
+        cameraDownloadUrl = await recordingManager.uploadRecording((progress) => uploadProgress.value = progress);
     } catch (error) {
         uploadProgress.value = 0;
         uploadStatusLabel.innerText = "Upload failed - Try again please";
@@ -236,9 +178,6 @@ async function beginUpload() {
     uploadStatusLabel.innerText = "Upload complete";
     urlsContainer.style.display = "block";
 
-    cameraUrlAnchor.innerText = uploadResult.cameraUrl;
-    cameraUrlAnchor.href = uploadResult.cameraUrl;
-
-    screenUrlAnchor.innerText = uploadResult.screenUrl;
-    screenUrlAnchor.href = uploadResult.screenUrl;
+    cameraUrlAnchor.innerText = cameraDownloadUrl;
+    cameraUrlAnchor.href = cameraDownloadUrl;
 }
