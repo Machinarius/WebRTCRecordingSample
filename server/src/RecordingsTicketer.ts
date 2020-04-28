@@ -19,10 +19,33 @@ const S3 = new AWS.S3({
 
 const URL_EXPIRATION = parseInt(process.env.S3_URL_EXPIRATION_SECONDS || "300");
 
+const CONTENT_TYPE_MAP = {
+    "video/x-matroska": "mkv",
+    "video/webm": "webm"
+}
+
 export const Route = "/recordings/ticket";
 export let MiddlewareFunc: Handler = async (req: Request, res: Response, next: NextFunction) => {
+    if (req.method != "POST") {
+        res.status(405).send("Method not allowed");
+        return;
+    }
+
+    let targetContentType = req.body.targetContentType;
+    if (!targetContentType || typeof targetContentType !== "string") {
+        res.status(400).send("Missing Content Type");
+        return;
+    }
+
+    let mimeTypeValue = targetContentType.split(";")[0];
+    let extension = CONTENT_TYPE_MAP[mimeTypeValue];
+    if (!extension) {
+        res.status(400).send("Invalid content type");
+        return;
+    }
+
     let ticketId = uuid.v4();
-    let cameraKey = "camera-" + ticketId + ".webm";
+    let cameraKey = "camera-" + ticketId + "." + extension;
 
     function getSignedUrl(key: string, action: "getObject" | "putObject"): Promise<string> {
         return S3.getSignedUrlPromise(action, {

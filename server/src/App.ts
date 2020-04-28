@@ -27,12 +27,13 @@ app.use(function(req, res, next) {
     next();
 });
 
+app.use(express.json());
 app.get("/ping", (req, res) => {
     res.send("PONG");
     res.end();
 });
 
-app.get(RecordingsTicketer.Route, RecordingsTicketer.MiddlewareFunc);
+app.post(RecordingsTicketer.Route, RecordingsTicketer.MiddlewareFunc);
 app.use(RecordingServer.Route, RecordingServer.MiddlewareFunc);
 console.log("Serving recording files from S3 Bucket " + process.env.S3_TARGET_BUCKET);
 

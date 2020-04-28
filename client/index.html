@@ -7,32 +7,31 @@
         <meta charset="UTF-8">
     </head>
     <body>
-        <p>0. Does the browser support the MediaStream APIs?</p>
+        <p>0. Does the browser support the required APIs?</p>
         <input type="checkbox" disabled id="browser-support" />
         <div id="compatibility-issues"></div>
 
-        <p>1. Request camera permissions</p>
-        <button id="request-camera">Request permissions</button>
-
-        <p>2. See camera output</p>
+        <p>1. Record yourself</p>
         <video id="camera-output" playsinline class="video-js vjs-default-skin"></video>
 
-        <p>3. Start recording</p>
-        <button id="start-recording" disabled>Start recording</button>
+        <div id="input-devices-container" style="display: none;">
+            You may select which device to record audio and video from:
 
-        <p>Recording status: <span id="recording-status">Not possible yet</span></p>
+            <p>Audio input device</p>
+            <select id="video-input-select"></select>
+            <p>Video input device</p>
+            <select id="audio-input-select"></select>
 
-        <p>4. Stop recording</p>
-        <button id="stop-recording" disabled>Stop recording</button>
+            <p>Warning: Changing input devices may require you to grant permissions again</p>
+        </div>
 
-        <p>5. Preview results</p>
-        <div id="output-container"></div>
+        <p>Recording status: <span id="recording-status">Verifying the compatibility of your browser...</span></p>
 
-        <p>6. Upload Result</p>
+        <p>2. Upload Result</p>
         <button id="begin-upload" disabled>Begin Upload</button>
 
         <div id="progress-container" style="display: none;">
-            <p>7. Upload progress</p>
+            <p>3. Upload progress</p>
             <progress id="upload-progress" max="100"></progress>
             <p id="upload-status"></p>
 

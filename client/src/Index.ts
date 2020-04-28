@@ -6,7 +6,7 @@ import videojs, { VideoJsPlayer, VideoJsPlayerOptions } from "video.js";
 import 'recordrtc';
 import 'videojs-record';
 
-import LocalRecordingManager from "./LocalRecordingManager";
+import BlobUploader from "./BlobUploader";
 
 if (document.readyState === "complete") {
     initSample();
@@ -16,19 +16,12 @@ if (document.readyState === "complete") {
     });
 }
 
-var recordingManager: LocalRecordingManager;
-
-var sessionIdOutput: HTMLElement;
-var requestCameraButton: HTMLInputElement;
-var startRecordingButton: HTMLInputElement;
-var stopRecordingButton: HTMLInputElement;
-
-var cameraOutputElement: HTMLVideoElement;
-
 var browserSupportCheck: HTMLInputElement;
 var recordingStatusLabel: HTMLElement;
 
-var outputContainer: HTMLElement;
+var inputDevicesContainer: HTMLElement;
+var audioInputSelect: HTMLSelectElement;
+var videoInputSelect: HTMLSelectElement;
 
 var beginUploadButton: HTMLButtonElement;
 var progressContainer: HTMLElement;
@@ -37,18 +30,14 @@ var uploadStatusLabel: HTMLElement;
 var urlsContainer: HTMLElement;
 
 var cameraUrlAnchor: HTMLAnchorElement;
+
 function initSample() {
-    sessionIdOutput = document.getElementById("sessionid-output") as HTMLElement;
-    requestCameraButton = document.getElementById("request-camera") as HTMLInputElement;
-    startRecordingButton = document.getElementById("start-recording") as HTMLInputElement;
-    stopRecordingButton = document.getElementById("stop-recording") as HTMLInputElement;
-
-    cameraOutputElement = document.getElementById("camera-output") as HTMLVideoElement;
-
     browserSupportCheck = document.getElementById("browser-support") as HTMLInputElement;
     recordingStatusLabel = document.getElementById("recording-status") as HTMLElement;
-
-    outputContainer = document.getElementById("output-container") as HTMLElement;
+    
+    inputDevicesContainer = document.getElementById("input-devices-container") as HTMLElement;
+    videoInputSelect = document.getElementById("video-input-select") as HTMLSelectElement;
+    audioInputSelect = document.getElementById("audio-input-select") as HTMLSelectElement;
 
     beginUploadButton = document.getElementById("begin-upload") as HTMLButtonElement;
     progressContainer = document.getElementById("progress-container") as HTMLElement;
@@ -64,33 +53,13 @@ function initSample() {
     }
 
     browserSupportCheck.checked = true;
-
-    requestCameraButton.onclick = requestCameraStream;
-    startRecordingButton.onclick = startRecording;
-    stopRecordingButton.onclick = stopRecording;
     beginUploadButton.onclick = beginUpload;
+    initializePlayer();
 }
-
-var supportedWebMRecordingMIMEType: string | undefined;
-const knownWebMMIMETypes = [
-    'video/webm', // Implicit codec selection. Firefox likes this input
-    'video/webm\;codecs=vp9', 
-    'video/webm\;codecs=vp8', 
-    'video/webm\;codecs="vp9, vorbis"', 
-    'video/webm\;codecs="vp8, vorbis"', 
-    'video/webm\;codecs="vp9, opus"', 
-    'video/webm\;codecs="vp8, opus"', 
-    'video/webm\;codecs=daala', 
-    'video/webm\;codecs=h264', 
-    'audio/webm\;codecs=opus', 
-    'video/mpeg'
-];
 
 function hasGetUserMedia(): boolean {
     let captureApisSupported = !!(navigator.mediaDevices.getUserMedia);
-    let recordingApisSupported = !!(MediaRecorder) && !!(
-        supportedWebMRecordingMIMEType = knownWebMMIMETypes.find(mimeType => MediaRecorder.isTypeSupported(mimeType) && MediaSource.isTypeSupported(mimeType))
-    );
+    let recordingApisSupported = !!(MediaRecorder) && !!(MediaSource);
 
     let compatIssuesContainer = document.getElementById("compatibility-issues")!;
     if (!captureApisSupported) {
@@ -105,24 +74,12 @@ function hasGetUserMedia(): boolean {
         compatIssuesContainer.appendChild(messageElement);
     }
 
-    console.log("Chosen recording codec: " + supportedWebMRecordingMIMEType);
     return captureApisSupported && recordingApisSupported;
 }
 
-var cameraStream: MediaStream;
 var cameraPlayer: VideoJsPlayer;
 
-async function requestCameraStream() {
-    if (cameraStream) {
-        cameraStream.getTracks().forEach(function(track) {
-            track.stop();
-        });
-    }
-
-    cameraStream = await navigator.mediaDevices.getUserMedia({
-        audio: true,
-        video: true
-    });
+async function initializePlayer() {
     cameraPlayer = await new Promise<VideoJsPlayer>((resolve, reject) => {
         let options: VideoJsPlayerOptions = {
             controls: true,
@@ -131,12 +88,12 @@ async function requestCameraStream() {
             loop: false,
             width: 320,
             height: 240,
-            src: cameraStream as any,
             plugins: {
                 // configure videojs-record plugin
                 record: {
                     audio: true,
                     video: true,
+                    maxLength: 60,
                     debug: true
                 }
             }
@@ -152,43 +109,115 @@ async function requestCameraStream() {
         }
     });
 
-    cameraPlayer.src(cameraStream as any);
+    cameraPlayer.on("finishRecord", onRecordingFinished);
+    cameraPlayer.on("startRecord", onRecordingStarted);
+    cameraPlayer.on("deviceReady", onDeviceReady);
+    cameraPlayer.on("deviceError", onDeviceError);
+    cameraPlayer.on("enumerateReady", onDevicesEnumerated);
 
-    startRecordingButton.disabled = false;
-    recordingStatusLabel.innerText = "Idle";
+    recordingStatusLabel.innerText = "Click on the camera icon above to get started";
 }
 
-function startRecording() {
-    recordingManager = new LocalRecordingManager(cameraStream, supportedWebMRecordingMIMEType!);
-    recordingManager.recordingComplete = onRecordingCompleted;
-    recordingManager.statusChanged = onRecordingStatusChanged;
-    recordingManager.beginRecording();
+function onDeviceError() {
+    recordingStatusLabel.innerText = "Error: Could not get access to input devices";
 
-    startRecordingButton.disabled = true;
-    stopRecordingButton.disabled = false;
-    clearOutputContainer();
+    console.log('device error:', (cameraPlayer as any).deviceErrorCode);
 }
 
-async function stopRecording() {
-    recordingManager.stopRecording();
+function onDeviceReady() {
+    if (!devicesEnumerated) {
+        recordingStatusLabel.innerText = "Enumerating input devices";
+        (cameraPlayer as any).record().enumerateDevices();
+
+        return;
+    }
+
+    recordingStatusLabel.innerText = "Ready to record.";
+}
+
+var devicesEnumerated = false;
+function onDevicesEnumerated() {
+    if (devicesEnumerated) {
+        return;
+    }
+
+    let mediaDevices = (cameraPlayer as any).record().devices as MediaDeviceInfo[];
+    let audioInputs = mediaDevices.filter(deviceDesc => deviceDesc.kind == "audioinput");
+    let videoInputs = mediaDevices.filter(deviceDesc => deviceDesc.kind == "videoinput");
+
+    if (audioInputs.length == 0 || videoInputs.length == 0) {
+        // TODO: Properly handle these scenarios?
+        recordingStatusLabel.innerText = "Could not get access to input devices but Recording may still work?";
+        return;
+    }
+
+    if (audioInputs.length == 1 && videoInputs.length == 1) {
+        recordingStatusLabel.innerText = "Ready to record.";
+        return;
+    }
+
+    function createOption(deviceDesc: MediaDeviceInfo): HTMLOptionElement {
+        let option = document.createElement("option") as HTMLOptionElement;
+        option.value = deviceDesc.deviceId;
+        option.text = deviceDesc.label;
+
+        return option;
+    }
+
+    audioInputs.map(createOption).forEach(audioInputSelect.appendChild.bind(audioInputSelect));
+    videoInputs.map(createOption).forEach(videoInputSelect.appendChild.bind(videoInputSelect));
+
+    audioInputSelect.addEventListener("change", onAudioInputChanged);
+    videoInputSelect.addEventListener("change", onVideoInputChanged);
+
+    inputDevicesContainer.style.display = "block";
+    recordingStatusLabel.innerText = "Ready to record.";
+    devicesEnumerated = true;
+}
+
+function onAudioInputChanged(selectEvent: Event) {
+    let selectedOption = audioInputSelect.options[audioInputSelect.selectedIndex];
     
-    startRecordingButton.disabled = false;
-    stopRecordingButton.disabled = true;
+    try {
+        (cameraPlayer as any).record().setAudioInput(selectedOption.value);
+        console.log("Changed audio input device to " + selectedOption.label);
+        
+        recordingStatusLabel.innerText = "Reconfiguring input devices...";
+    } catch (error) {
+        console.error("Could not change audio input device. Reverting to the default (index 0)", error);
+        audioInputSelect.selectedIndex = 0;
+    }
 }
 
-async function onRecordingCompleted() {
-    let cameraElement = await recordingManager.getCameraPreviewElement();
-    outputContainer.appendChild(cameraElement);
+function onVideoInputChanged(selectEvent: Event) {
+    let selectedOption = videoInputSelect.options[videoInputSelect.selectedIndex];
+    
+    try {
+        (cameraPlayer as any).record().setVideoInput(selectedOption.value);
+        console.log("Changed video input device to " + selectedOption.label);
+        
+        recordingStatusLabel.innerText = "Reconfiguring input devices...";
+    } catch (error) {
+        console.error("Could not change video input device. Reverting to the default (index 0)", error);
+        videoInputSelect.selectedIndex = 0;
+    }
+}
+
+function onRecordingStarted() {
+    recordingStatusLabel.innerText = "Recording...";
+
+    audioInputSelect.disabled = true;
+    videoInputSelect.disabled = true;
+}
+
+var recordBlob: Blob;
+function onRecordingFinished() {
+    recordingStatusLabel.innerText = "Recording complete";
+    recordBlob = (cameraPlayer as any).recordedData as Blob;
 
     beginUploadButton.disabled = false;
-}
-
-function onRecordingStatusChanged(status: string) {
-    recordingStatusLabel.innerText = status;
-}
-
-function clearOutputContainer() {
-    outputContainer.innerHTML = "";
+    audioInputSelect.disabled = false;
+    videoInputSelect.disabled = false;
 }
 
 async function beginUpload() {
@@ -201,7 +230,7 @@ async function beginUpload() {
     var cameraDownloadUrl: string;
 
     try {
-        cameraDownloadUrl = await recordingManager.uploadRecording((progress) => uploadProgress.value = progress);
+        cameraDownloadUrl = await BlobUploader.uploadBlobToBackend(recordBlob, (progress) => uploadProgress.value = progress);
     } catch (error) {
         uploadProgress.value = 0;
         uploadStatusLabel.innerText = "Upload failed - Try again please";
