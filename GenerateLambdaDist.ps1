@@ -1,6 +1,7 @@
 param (
     [switch] $Deploy,
-    [switch] $RunLocal
+    [switch] $RunLocal,
+    [string] $Stage = ""
 )
 
 If (Test-Path .\dist) {
@@ -11,7 +12,12 @@ New-Item -ItemType Directory -Path .\dist
 New-Item -ItemType Directory -Path .\dist\frontend
 
 Set-Location .\client
-yarn run webpack
+
+If ($Deploy) {
+    yarn run webpack --config webpack.prod.js
+} else {
+    yarn run webpack --config webpack.dev.js
+}
 
 Set-Location ..\server
 yarn run tsc --sourceMap false --outDir ..\dist\ --project .\tsconfig.json
@@ -44,7 +50,12 @@ If ($RunLocal) {
 
 If ($Deploy) {
     Set-Location .\dist
-    serverless deploy
+
+    If ($Stage) {
+        serverless deploy --stage $Stage
+    } else {
+        serverless deploy
+    }
 
     Set-Location ..
 }

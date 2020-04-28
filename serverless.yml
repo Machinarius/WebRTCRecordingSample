@@ -69,7 +69,7 @@ functions:
           cors: true
       - http:
           path: recordings/ticket
-          method: get
+          method: post
           cors: true
       - http:
           path: /
