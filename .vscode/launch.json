@@ -13,7 +13,7 @@
                 "<node_internals>/**",
                 "node_modules/**"
             ],
-            "args": ["${workspaceFolder}\\server\\src\\App.ts"],
+            "args": ["${workspaceFolder}\\server\\src\\LocalEntrypoint.ts"],
             "cwd": "${workspaceFolder}\\server"
         }
     ]

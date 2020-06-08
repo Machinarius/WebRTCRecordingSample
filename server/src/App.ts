@@ -6,6 +6,7 @@ import fs from "fs";
 
 import * as RecordingServer from "./RecordingFileServer";
 import * as RecordingsTicketer from "./RecordingsTicketer";
+import * as FormStateStore from "./FormStateStore";
 
 if (!process.env.INCOMING_TEMP_FOLDER || !fs.existsSync(process.env.INCOMING_TEMP_FOLDER)) {
     throw new Error("Make sure INCOMING_TEMP_FOLDER is defined in the .env file, and that it points to a valid writeable folder");
@@ -35,6 +36,7 @@ app.get("/ping", (req, res) => {
 
 app.post(RecordingsTicketer.Route, RecordingsTicketer.MiddlewareFunc);
 app.use(RecordingServer.Route, RecordingServer.MiddlewareFunc);
+app.use(FormStateStore.Route, FormStateStore.MiddlewareFunc);
 console.log("Serving recording files from S3 Bucket " + process.env.S3_TARGET_BUCKET);
 
 app.use("/", express.static("frontend", {

@@ -72,6 +72,14 @@ functions:
           method: post
           cors: true
       - http:
+          path: formstate/{id}
+          method: post
+          cors: true
+      - http:
+          path: formstate/{id}
+          method: get
+          cors: true  
+      - http:
           path: /
           method: get
           cors: true
