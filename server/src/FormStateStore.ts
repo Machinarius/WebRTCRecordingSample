@@ -19,6 +19,12 @@ import { PromiseResult } from "aws-sdk/lib/request";
 
 export const Route = "/formstate/:id";
 export let MiddlewareFunc: Express.Handler = async function(req: Express.Request, res: Express.Response, _next: Express.NextFunction) {
+    let userId = getSubClaimFromHeader(req);
+    if (!userId) {
+        res.status(401).send("Not Authorized");
+        return;
+    }
+
     if (req.method != "POST" && req.method != "GET") {
         res.status(405);
         res.send();
@@ -34,12 +40,13 @@ export let MiddlewareFunc: Express.Handler = async function(req: Express.Request
         return;
     }
 
+    let formStateKey = `formstates/${userId}/${formId}.json`;
     if (req.method == "POST") {
         let stateObject = req.body;
         let statePayload = JSON.stringify(stateObject);
         
         let putResult = await S3.putObject({
-            Key: "formstates/" + formId + ".json",
+            Key: formStateKey,
             Bucket: TARGET_BUCKET,
             Body: statePayload
         }).promise();
@@ -63,7 +70,7 @@ export let MiddlewareFunc: Express.Handler = async function(req: Express.Request
         try {
             getResult = await S3.getObject({
                 Bucket: TARGET_BUCKET,
-                Key: "formstates/" + formId + ".json"
+                Key: formStateKey
             }).promise();
 
             
@@ -88,4 +95,36 @@ export let MiddlewareFunc: Express.Handler = async function(req: Express.Request
 
         return;
     }
+}
+
+function getSubClaimFromHeader(req: Express.Request): string {
+    let authToken = req.header("Authorization")?.substr("Bearer ".length);
+    if (!authToken) {
+        return null;
+    }
+
+    let jwtComponents = authToken.split(".");
+    if (jwtComponents.length != 3) {
+        return null;
+    }
+
+    let jwtPayload = jwtComponents[1];
+    if (!jwtPayload) {
+        return null;
+    }
+    
+    var jwtClaims: any;
+    try {
+        let decodeBuffer = new Buffer(jwtPayload, "base64");
+        let payloadText = decodeBuffer.toString("utf-8");
+        jwtClaims = JSON.parse(payloadText);
+    } catch (error) {
+        return null;
+    }
+
+    if (!jwtClaims["sub"]) {
+        return null;
+    }
+
+    return jwtClaims["sub"];
 }

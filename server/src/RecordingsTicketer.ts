@@ -46,19 +46,17 @@ export let MiddlewareFunc: Handler = async (req: Request, res: Response, next: N
 
     let ticketId = uuid.v4();
     let cameraKey = "camera-" + ticketId + "." + extension;
-
-    function getSignedUrl(key: string, action: "getObject" | "putObject"): Promise<string> {
-        return S3.getSignedUrlPromise(action, {
+    let [cameraGet, cameraPut] = await Promise.all([
+        S3.getSignedUrlPromise("getObject", {
+            Bucket: TARGET_BUCKET,
+            Key: cameraKey
+        }),
+        S3.getSignedUrlPromise("putObject", {
             Bucket: TARGET_BUCKET,
             Expires: URL_EXPIRATION,
-            Key: key
-        });
-    };
-
-    let [cameraGet, cameraPut] = await Promise.all([
-        await getSignedUrl(cameraKey, "getObject"),
-        await getSignedUrl(cameraKey, "putObject")
-    ])
+            Key: cameraKey
+        })
+    ]);
 
     let response = {
         putUrl: cameraPut,
